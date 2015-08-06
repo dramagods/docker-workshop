@@ -248,12 +248,15 @@ google-chrome $(docker port hello-tomcat 8080)
 * **port**: Lookup the public-facing port that is NAT-ed to PRIVATE_PORT
 
 [hello-world/Dockerfile](hello-world/Dockerfile)
-cd hello-world
+
 
 ```
-FROM nginx:1.9.3
-ADD site /usr/share/nginx/html
+cd hello-world
+cat Dockerfile
+  FROM nginx:1.9.3
+  ADD site /usr/share/nginx/html
 ```
+
 Build hello-world image
 
 ```
