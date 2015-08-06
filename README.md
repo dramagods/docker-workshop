@@ -14,7 +14,7 @@ Preparations:
 
 ```
 docker pull tomcat:8
-docker pull elk
+docker pull sebp/elk
 docker pull redis
 docker pull java:7-jre
 docker pull ubuntu
