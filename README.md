@@ -308,7 +308,7 @@ docker run -it --rm --link redis:server redis bash -c 'redis-cli -h $SERVER_PORT
 docker run -d -p 4004:80 --name web -v /usr/share/nginx/html nginx
 google-chrome localhost:4004
 docker run --rm -it --volumes-from web ubuntu bash
-  vi /usr/share/nginx/html/index.php
+  vi /usr/share/nginx/html/index.html
 ```
 
 
