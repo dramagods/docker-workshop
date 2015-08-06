@@ -362,8 +362,10 @@ C^ + C
 docker-compose rm
 docker-compose up -d
 docker-compose ps
+docker-compose run calendarapp env
 docker-compose logs
 docker-compose stop
+docker-compose rm
 
 ```
 
