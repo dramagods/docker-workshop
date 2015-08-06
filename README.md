@@ -332,6 +332,29 @@ redis:
 
 ### Docker compose installation (https://docs.docker.com/compose/install)
 
+# CLI Basics
+
+### Version
+
+Check you have latest version of docker installed:
+
+```
+docker-compose --version
+```
+
+* If you don't have docker compose installed, check [here](https://docs.docker.com/compose/install)
+
+### Commands
+
+Check the available docker-compose commands
+
+```
+docker-compose
+```
+
+* Whenever you don't remember a command, just type docker
+* For more info, type `docker-compose help COMMAND` (e.g. `docker-compose help run`)
+
 ```
 cd docker-tomcat
 docker-compose up
