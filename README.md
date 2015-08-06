@@ -132,7 +132,7 @@ docker inspect $(docker ps -lq)
 
 ### BUILD a Tomcat Container with Ant installed
 
-Create a Git Container manually:
+Create a Tomcat Container with ant manually:
 
 ```
 docker run -it --name ant tomcat:8 bash
@@ -248,9 +248,16 @@ google-chrome $(docker port hello-tomcat 8080)
 * **port**: Lookup the public-facing port that is NAT-ed to PRIVATE_PORT
 
 [hello-world/Dockerfile](hello-world/Dockerfile)
+cd hello-world
+
 ```
 FROM nginx:1.9.3
 ADD site /usr/share/nginx/html
+```
+Build hello-world image
+
+```
+docker build -t hello-world .
 ```
 
 * The **ADD** instruction will copy new files from <src> and add them to the container's filesystem at path <dest>. It allows a URL in <src>. If the <src> parameter of ADD is an archive in a recognised compression format, it will be unpacked.
@@ -270,7 +277,7 @@ docker push $REGISTRY/offsidegaming/hello-world
 ### PULL Image from a Repository
 
 ```
-docker pull $REGISTRY/spiddy/hello-world
+docker pull $REGISTRY/offsidegaming/hello-world
 docker run -d -P --name=registry-hello $REGISTRY/offsidegaming/hello-world
 google-chrome $(docker port registry-hello 80)
 ```
@@ -283,6 +290,10 @@ google-chrome $(docker port registry-hello 80)
 
 ```
 docker run -d --name redis redis
+docker run -it --rm --link redis:server redis bash
+  env
+  cat /etc/hosts
+  
 docker run -it --rm --link redis:server redis bash -c 'redis-cli -h $SERVER_PORT_6379_TCP_ADDR'
   set hello world
   get hello
@@ -291,10 +302,10 @@ docker run -it --rm --link redis:server redis bash -c 'redis-cli -h $SERVER_PORT
 ## [Data Volume Pattern](http://docs.docker.com/userguide/dockervolumes/)
 
 ```
-docker run -d -p 4004:80 --name web -v /usr/local/nginx/html nginx
+docker run -d -p 4004:80 --name web -v /usr/share/nginx/html nginx
 google-chrome localhost:4004
 docker run --rm -it --volumes-from web ubuntu bash
-  vi /usr/local/nginx/html/index.php
+  vi /usr/share/nginx/html/index.php
 ```
 
 
