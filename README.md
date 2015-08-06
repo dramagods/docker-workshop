@@ -60,6 +60,13 @@ docker run tomcat:8 echo "Hello World"
 * If the Image is not cached, it pulls it automatically
 * It prints `Hello World` and exits
 
+###  RUN a while loop in a deamonized container
+```
+docker run -d ubuntu /bin/bash -c "while true; do echo hello; sleep 1; done"
+```
+
+* It prints hello endless
+
 ### RUN an interactive Container
 
 ```
