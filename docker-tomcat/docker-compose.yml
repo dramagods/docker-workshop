@@ -1,0 +1,24 @@
+calendarapp:
+  build: .
+  environment:
+    - ENV=production
+  ports:
+    - "8080:8080"
+  volumes:
+    - tomcat/conf:/usr/local/tomcat/conf
+  links:
+    - elk
+  dns:
+    - 10.1.1.121
+elk:
+  image: sebp/elk
+  links:
+    - redis
+  ports:
+    - "5601:5601"
+    - "9200:9200"
+    - "5000:5000"
+  volumes:
+    - ./logstash:/etc/logstash/conf.d/
+redis:
+  image: redis

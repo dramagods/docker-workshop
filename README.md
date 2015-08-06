@@ -9,17 +9,21 @@ The Workshop is separated in three sections
 Preparations:
 
 * Install Docker
-* Clone this repo: `git clone https://github.com/harbur/docker-workshop` (Some code examples require files located here)
+* Clone this repo: `git clone https://github.com/dramagods/docker-workshop` (Some code examples require files located here)
 * Warm-up the images:
 
 ```
+docker pull tomcat:8
+docker pull elk
+docker pull redis
+docker pull java:7-jre
 docker pull ubuntu
 docker pull nginx
 ```
 
 Assumptions:
 
-* During workshop the following ports are used `4000-4010`. If they are not available on your machine, adjust the CLI commands accordingly.
+* During workshop the following ports are used `4000-4010`, 5000, 5601, 8080 and 9200. If they are not available on your machine, adjust the CLI commands accordingly.
 
 # CLI Basics
 
@@ -49,7 +53,7 @@ docker
 ### RUN a "Hello World" container
 
 ```
-docker run ubuntu echo "Hello World"
+docker run tomcat:8 echo "Hello World"
 ```
 
 * If the Image is not cached, it pulls it automatically
@@ -58,7 +62,7 @@ docker run ubuntu echo "Hello World"
 ### RUN an interactive Container
 
 ```
-docker run -it ubuntu bash
+docker run -it tomcat:8 bash
   cat /etc/os-release
 ```
 
@@ -68,13 +72,13 @@ docker run -it ubuntu bash
 ### RUN a Container with pipeline
 
 ```
-cat /etc/resolv.conf | docker run -i ubuntu wc -l
+cat /etc/resolv.conf | docker run -i tomcat:8 wc -l
 ```
 
 ### SEARCH a Container
 
 ```
-docker search -s 10 nginx
+docker search -s 10 tomcat
 ```
 
 * **-s**: Only displays with at least x stars
@@ -82,8 +86,9 @@ docker search -s 10 nginx
 ### RUN a Container and expose a Port
 
 ```
-docker run -d -p 4000:80 nginx
-google-chrome localhost:4000
+docker run -d -p 8080:8080 tomcat:8
+google-chrome localhost:8080 (if you're using linux)
+google-chrome $(boot2docker ip):8080 (if you're using mac/win)
 ```
 
 * **-d**: Detached mode: Run container in the background, print new container id
@@ -91,38 +96,46 @@ google-chrome localhost:4000
 * For more info about the container, see [nginx](https://registry.hub.docker.com/_/nginx/)
 
 ### RUN a Container with a Volume
-
+Example 1:
 ```
 docker run -d -p 4001:80 -v $(pwd)/hello-world/site/:/usr/share/nginx/html:ro nginx
-google-chrome localhost:4001
+google-chrome localhost:4001 (if you're using linux)
+google-chrome $(boot2docker ip):4001 (if you're using mac/win)
+```
+
+Example 2:
+```
+docker run -d -p 8080:8080 -v ${PWD}/tomcat/conf:/usr/local/tomcat/conf tomcat:8
+google-chrome localhost:8080 (if you're using linux)
+google-chrome $(boot2docker ip):8080 (if you're using mac/win)
+
+docker exec -ti $(docker ps -lq) bash
+
+docker inspect $(docker ps -lq)
 ```
 
 * **-v**: Bind mount a volume (e.g., from the host: -v /host:/container, from docker: -v /container)
 * The volume is **linked** inside the container. Any external changes are visible directly inside the container.
 * This example breaks the immutability of the container, good for debuging, not recommended for production (Volumes should be used for data, not code)
-
-## Workshop 1 (10 mins)
-
-* Build a static website
-* Run it on your machine
-* Share your (non-localhost) url on Chat room [![Gitter chat](https://badges.gitter.im/harbur/docker-workshop.png)](https://gitter.im/harbur/docker-workshop)
+* **exec**: Run a command inside the container
+* **inspect**: Provides detailed information of a container
 
 # Dockerfile Basics
 
-### BUILD a Git Client Container
+### BUILD a Tomcat Container with Ant installed
 
 Create a Git Container manually:
 
 ```
-docker run -it --name git ubuntu bash
+docker run -it --name ant tomcat:8 bash
   apt-get update
-  apt-get -y install git
-  git version
+  apt-get -y install ant
+  ant -version
   exit
-docker commit git docker-git
-docker rm git
-docker run --rm -it docker-git git version
-docker rmi docker-git
+docker commit ant docker-tomcat-ant
+docker rm ant
+docker run --rm -it docker-tomcat-ant ant -version
+docker rmi docker-tomcat-ant
 ```
 
 * **--name**: Assign a name to the container
@@ -131,58 +144,96 @@ docker rmi docker-git
 * **rmi**: Remove one or more images
 * **--rm**: Automatically remove the container when it exits
 
-Create a Git Container with Dockerfile:
+Create a Tomcat Container with Ant installed using Dockerfile:
 
 ```
-cd docker-git
-docker build -t docker-git .
-docker run -it docker-git git version
+cd docker-tomcat-ant
+docker build -t docker-tomcat-ant .
+docker run -it docker-tomcat-ant ant -version
 ```
 
 * **build**: Build an image from a Dockerfile
 
-[docker-git/Dockerfile](docker-git/Dockerfile)
+[docker-tomcat-ant/Dockerfile](docker-tomcat-ant/Dockerfile)
 ```
-FROM ubuntu:14.04
-RUN apt-get update
+FROM tomcat:8
+
+MAINTAINER Alfonso Gonzalez <alfonso@offsidegaming.com>
+
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get -qqy install git
+
+RUN apt-get update
+RUN apt-get -y install ant
 ```
 
 * The **FROM** instruction sets the Base Image for subsequent instructions
+* The **MAINTAINER** instruction sets person/s who maintain the Dockerfile
 * The **RUN** instruction will execute any commands in a new layer on top of the current image and commit the results
 * The **ENV** instruction sets the environment variable <key> to the value <value>
 
-### BUILD an Apache Server Container
+### BUILD an Apache Tomcat Server Container
 
-Create an Apache Server Container with Dockerfile:
+Create an Apache Tomcat Server Container with Dockerfile:
 
 ```
-cd docker-apache2
-docker build -t docker-apache2 .
-docker run -d -p 4003:80 docker-apache2
-google-chrome localhost:4003
+cd docker-tomcat-build
+docker build -t docker-tomcat-build .
+docker run -d -p 8080:8080 docker-tomcat-build
+google-chrome localhost:8080 (if you're using linux)
+google-chrome $(boot2docker ip):8080 (if you're using mac/win)
 ```
 
-[docker-apache2/Dockerfile](docker-apache2/Dockerfile)
+[docker-tomcat-build/Dockerfile](docker-tomcat-build/Dockerfile) Taken from Official Docker Image https://github.com/docker-library/tomcat/blob/2f17559d7a1c62dbc17b63750b31a0beea205120/8-jre7/Dockerfile
 ```
-FROM ubuntu:14.04
-RUN apt-get update
-RUN DEBIAN_FRONTEND=noninteractive apt-get -qqy install apache2
-EXPOSE 80
-CMD apachectl start; tail -f /var/log/apache2/access.log
+FROM java:7-jre
+
+ENV CATALINA_HOME /usr/local/tomcat
+ENV PATH $CATALINA_HOME/bin:$PATH
+RUN mkdir -p "$CATALINA_HOME"
+WORKDIR $CATALINA_HOME
+
+# see https://www.apache.org/dist/tomcat/tomcat-8/KEYS
+RUN gpg --keyserver pool.sks-keyservers.net --recv-keys \
+  05AB33110949707C93A279E3D3EFE6B686867BA6 \
+  07E48665A34DCAFAE522E5E6266191C37C037D42 \
+  47309207D818FFD8DCD3F83F1931D684307A10A5 \
+  541FBE7D8F78B25E055DDEE13C370389288584E7 \
+  61B832AC2F1C5A90F0F9B00A1C506407564C17A3 \
+  79F7026C690BAA50B92CD8B66A3AD3F4F22C4FED \
+  9BA44C2621385CB966EBA586F72C284D731FABEE \
+  A27677289986DB50844682F8ACB77FC2E86E29AC \
+  A9C5DF4D22E99998D9875A5110C01C5A2F6059E7 \
+  DCFD35E0BF8CA7344752DE8B6FB21E8933C60243 \
+  F3A04C595DB5B6A5F1ECA43E3B7BBB100D811BBE \
+  F7DA48BB64BCB84ECBA7EE6935CD23C10D498E23
+
+ENV TOMCAT_MAJOR 8
+ENV TOMCAT_VERSION 8.0.24
+ENV TOMCAT_TGZ_URL https://www.apache.org/dist/tomcat/tomcat-$TOMCAT_MAJOR/v$TOMCAT_VERSION/bin/apache-tomcat-$TOMCAT_VERSION.tar.gz
+
+RUN set -x \
+  && curl -fSL "$TOMCAT_TGZ_URL" -o tomcat.tar.gz \
+  && curl -fSL "$TOMCAT_TGZ_URL.asc" -o tomcat.tar.gz.asc \
+  && gpg --verify tomcat.tar.gz.asc \
+  && tar -xvf tomcat.tar.gz --strip-components=1 \
+  && rm bin/*.bat \
+  && rm tomcat.tar.gz*
+
+EXPOSE 8080
+CMD ["catalina.sh", "run"]
 ```
 
+* The **WORKDIR** instructions change or makes the following directory the current working directory
 * The **EXPOSE** instructions informs Docker that the container will listen on the specified network ports at runtime
 * The **CMD** instruction sets the command to be executed when running the image
 
-### BUILD a Static website Image
+### BUILD a Hello Tomcat  Image
 
 ```
-cd hello-world
-docker build -t hello-world .
-docker run -d --name hello -P hello-world
-google-chrome $(docker port hello 80)
+cd docker-tomcat-build
+docker build -t docker-tomcat-build .
+docker run -d --name hello-tomcat -P docker-tomcat-build
+google-chrome $(docker port hello-tomcat 8080)
 ```
 
 * **-P**: Publish all exposed ports to the host interfaces
@@ -194,36 +245,25 @@ FROM nginx:1.9.3
 ADD site /usr/share/nginx/html
 ```
 
-* The **ADD** instruction will copy new files from <src> and add them to the container's filesystem at path <dest>
-
-## Workshop 2 (10 mins)
-
-* Build your website with Dockerfile
-* Run an instance
-* Share your (non-localhost) url on Chat room [![Gitter chat](https://badges.gitter.im/harbur/docker-workshop.png)](https://gitter.im/harbur/docker-workshop)
+* The **ADD** instruction will copy new files from <src> and add them to the container's filesystem at path <dest>. It allows a URL in <src>. If the <src> parameter of ADD is an archive in a recognised compression format, it will be unpacked.
+* The **COPY** instruction will copy new files from <src> and add them to the container's filesystem at path <dest>
 
 ### PUSH Image to a Registry
 
 ```
-REGISTRY=localhost:5000
-docker tag hello-world $REGISTRY/spiddy/hello-world
-docker push $REGISTRY/spiddy/hello-world
+REGISTRY=docker.offsidegaming.com:5000
+docker tag hello-world $REGISTRY/offsidegaming/hello-world
+docker push $REGISTRY/offsidegaming/hello-world
 ```
 
 * **tag**: Tag an image into a repository
 * **push**: Push an image or a repository to a Docker registry server
 
-## Workshop 3 (10 mins)
-
-* Push your website to the local Registry (use your github username)
-* Push your website image
-* Share your image name on Chat room [![Gitter chat](https://badges.gitter.im/harbur/docker-workshop.png)](https://gitter.im/harbur/docker-workshop)
-
 ### PULL Image from a Repository
 
 ```
 docker pull $REGISTRY/spiddy/hello-world
-docker run -d -P --name=registry-hello $REGISTRY/spiddy/hello-world
+docker run -d -P --name=registry-hello $REGISTRY/offsidegaming/hello-world
 google-chrome $(docker port registry-hello 80)
 ```
 
@@ -234,29 +274,9 @@ google-chrome $(docker port registry-hello 80)
 ## [Linking Containers Together](https://docs.docker.com/userguide/dockerlinks/)
 
 ```
-docker run --rm --name redis dockerfile/redis
-docker run -it --rm --link redis:server dockerfile/redis bash -c 'redis-cli -h $SERVER_PORT_6379_TCP_ADDR'
-docker run -it --rm --link redis:redis relateiq/redis-cli
+docker run -d --name redis redis
+docker run -it --rm --link redis:server redis bash -c 'redis-cli -h $SERVER_PORT_6379_TCP_ADDR'
   set hello world
-  get hello
-```
-
-## [Ambassador Pattern](http://docs.docker.com/articles/ambassador_pattern_linking/)
-
-host A (Server):
-
-```
-docker run -d --name redis dockerfile/redis
-docker run -d --link redis:redis --name redis_ambassador -p 6379:6379 svendowideit/ambassador
-
-```
-
-host B (Client):
-
-```
-docker run -d --name redis_ambassador --expose 6379 -e REDIS_PORT_6379_TCP=tcp://188.226.255.31:6379 svendowideit/ambassador
-docker run -i -t --rm --link redis_ambassador:redis relateiq/redis-cli
-  set hello there
   get hello
 ```
 
@@ -269,43 +289,68 @@ docker run --rm -it --volumes-from web ubuntu bash
   vi /usr/local/nginx/html/index.php
 ```
 
-## [Service Discovery Pattern](https://github.com/crosbymichael/skydock)
+
+# Docker compose (https://docs.docker.com/compose/)
+
+Compose is a tool for defining and running multi-container applications with Docker. With Compose, you define a multi-container application in a single file, then spin your application up in a single command which does everything that needs to be done to get it running.
+
+Compose is great for development environments, staging servers, and CI. We don’t recommend that you use it in production yet.
+
+Using Compose is basically a three-step process.
+
+Define your app’s environment with a Dockerfile so it can be reproduced anywhere.
+Define the services that make up your app in docker-compose.yml so they can be run together in an isolated environment:
+Lastly, run docker-compose up and Compose will start and run your entire app.
+A docker-compose.yml looks like this:
 
 ```
-sudo vi /etc/default/docker
-sudo service docker restart
-docker run -d -p 172.17.42.1:53:53/udp --name skydns crosbymichael/skydns -nameserver 8.8.8.8:53 -domain docker
-docker run -d -v /var/run/docker.sock:/docker.sock --name skydock crosbymichael/skydock -ttl 30 -environment dev -s /docker.sock -domain docker -name skydns
+calendarapp:
+  build: .
+  environment:
+    - ENV=production
+  ports:
+    - "8080:8080"
+  volumes:
+    - tomcat/conf:/usr/local/tomcat/conf
+  links:
+    - elk
+  dns:
+    - 10.1.1.121
+elk:
+  image: sebp/elk
+  links:
+    - redis
+  ports:
+    - "5601:5601"
+    - "9200:9200"
+    - "5000:5000"
+  volumes:
+    - ./logstash:/etc/logstash/conf.d/
+redis:
+  image: redis
 ```
 
-* Redis Service
+### Docker compose installation (https://docs.docker.com/compose/install)
 
 ```
-docker run -d --name redis1 crosbymichael/redis
-docker run -d --name redis2 crosbymichael/redis
-docker run -d --name redis3 crosbymichael/redis
-docker run -t -i crosbymichael/redis-cli -h redis.dev.docker
-  set hello world
-  get hello
-```
-
-* Service discovery with DNS:
-
-```
-dig @172.17.42.1 +short redis1.redis.dev.docker
-dig @172.17.42.1 +short redis.dev.docker
-```
-
-* Load Balancing with DNS
+cd docker-tomcat
+docker-compose up
+C^ + C
+docker-compose rm
+docker-compose up -d
+docker-compose ps
+docker-compose logs
+docker-compose stop
 
 ```
-docker rm -f redis1
-get hello
-dig @172.17.42.1 +short redis.dev.docker
-```
 
+* **up**: it will download or build the images and start containers in a proper order. Use -d to run it in daemon.
+* **rm**: Removes all containers
+* **ps**: Shows containers running.
+* **logs**: Shows containers console logs.
+* **stop**: Stop containers
 
-# Helper Methods
+# Helpers commands
 
 Cleanup Stopped Containers:
 
@@ -321,4 +366,4 @@ docker rmi $(docker images | grep "^<none>" | awk '{print $3}')
 
 # Credits
 
-This workshop was prepared by [harbur.io](http://harbur.io), under MIT License. Feel free to fork and improve.
+This workshop was prepared by Alfonso Gonzalez based on harbur docker workshop[harbur.io](http://harbur.io), under MIT License. Feel free to fork and improve.
