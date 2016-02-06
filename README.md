@@ -408,7 +408,7 @@ docker rm $(docker ps -q -a)
 Cleanup Untagged Images:
 
 ```
-docker rmi $(docker images | grep "^<none>" | awk '{print $3}')
+docker rmi $(docker images -q -f dangling=true)
 ```
 
 # Credits
