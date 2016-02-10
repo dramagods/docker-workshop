@@ -9,11 +9,15 @@ The Workshop is separated in three sections
 
 Preparations:
 
-* Install Docker
+* Install Docker:
+  - Mac: brew cask install dockertoolbox && brew install dockertoolbox
+  - or check [here](https://docs.docker.com/installation/#installation)
+
 * Clone this repo: `git clone https://github.com/dramagods/docker-workshop` (Some code examples require files located here)
 * Warm-up the images:
 
 ```
+docker pull ruby:2.2
 docker pull tomcat:8
 docker pull sebp/elk
 docker pull redis
@@ -28,6 +32,12 @@ Assumptions:
 
 # CLI Basics
 
+### Getting started... is Docker ready?
+
+```
+docker info
+```
+
 ### Version
 
 Check you have latest version of docker installed:
@@ -36,7 +46,7 @@ Check you have latest version of docker installed:
 docker version
 ```
 
-* If you don't have docker installed, check [here](https://docs.docker.com/installation/#installation)
+* If you don't have docker installed see above, preparations section.
 * If you're not on the latest version, it will prompt you to update
 * If you're not on docker group you might need to prefix commands with `sudo`. See [here](http://docs.docker.com/installation/ubuntulinux/#giving-non-root-access) for details about it.
 
@@ -51,39 +61,101 @@ docker
 * Whenever you don't remember a command, just type docker
 * For more info, type `docker help COMMAND` (e.g. `docker help run`)
 
-### RUN a "Hello World" container
+### RUN a container
 
 ```
-docker run tomcat:8 echo "Hello World"
+docker run ruby:2.2 echo "Hello World"
 ```
 
 * If the Image is not cached, it pulls it automatically
 * It prints `Hello World` and exits
 
-###  RUN a while loop in a deamonized container
-```
-docker run -d ubuntu /bin/bash -c "while true; do echo hello; sleep 1; done"
-```
-
-* It prints hello endless
-
 ### RUN an interactive Container
 
 ```
-docker run -it tomcat:8 bash
+docker run -i -t ubuntu /bin/bash
+  hostname
   cat /etc/os-release
+  cat /etc/hosts
+  ip a
+  ps auxwww
+  apt-get update && apt-get install vim
+  exit
 ```
 
 * **-i**: Keep stdin open even if not attached
 * **-t**: Allocate a pseudo-tty
 
+So what's happened to our container? Well, it has now stopped running. The container only runs for as long as the command we specified, /bin/bash, is running. Once we exited the container, that command ended, and the container was stopped. The container still exists; we can show a list of current containers using the **docker ps -a** command.
+
+```
+docker ps -a
+```
+
+### Start a container and attach to it
+```
+docker start <container_id>
+docker attach <container_id>
+```
+
+Discuss the results.
+
 ### RUN a Container with pipeline
 
 ```
-cat /etc/resolv.conf | docker run -i tomcat:8 wc -l
+cat /etc/resolv.conf | docker run -i ubuntu wc -l
 ```
 
-### SEARCH a Container
+###  RUN a while loop in a deamonized container
+```
+docker run --name daemon_hello_world -d ubuntu /bin/bash -c "while true; do echo hello world; sleep 1; done"
+```
+
+* It prints hello endless in stdout
+
+```
+docker logs daemon_hello_world
+```
+* **-f**: Follow logs
+* **-t**: Adds date timestamp
+
+###  Inspect a container
+```
+docker top daemon_hello_world
+docker stats [<container_id>|<container_name>]
+docker inspect <container_id>|<container_name>
+```
+
+###  Running a process inside a container
+```
+docker exec -d daemon_hello_world touch /tmp/config # background task
+docker exec -ti daemon_hello_world /bin/bash # interactive
+```
+
+###  Stop a container
+```
+docker stop daemon_hello_world 
+```
+
+###  Delete a container
+```
+docker rm daemon_hello_world 
+```
+* container has to be stopped before we could delete it. We could force deletion with flag **-f**
+
+###  Working with docker images
+```
+docker images 
+```
+* shows images in docker host
+
+###  Download an image from public repository
+```
+docker pull ubuntu:14.04
+docker run -ti ubuntu:14.04 /bin/bash
+```
+
+### Search images
 
 ```
 docker search -s 10 tomcat
@@ -91,12 +163,17 @@ docker search -s 10 tomcat
 
 * **-s**: Only displays with at least x stars
 
+###  Building an image from a Dockerfile. Let's create our first Dockerfile!
+```
+docker build -t workshop/app .
+```
+
 ### RUN a Container and expose a Port
 
 ```
-docker run -d -p 8080:8080 tomcat:8
-google-chrome localhost:8080 (if you're using linux)
-google-chrome $(boot2docker ip):8080 (if you're using mac/win)
+docker run -d -p 80:80 nginx
+google-chrome localhost:80 (if you're using linux)
+google-chrome $(docker-machine ip):80 (if you're using mac/win)
 ```
 
 * **-d**: Detached mode: Run container in the background, print new container id
@@ -166,7 +243,7 @@ docker run -it docker-tomcat-ant ant -version
 ```
 FROM tomcat:8
 
-MAINTAINER Alfonso Gonzalez <alfonso@offsidegaming.com>
+MAINTAINER Alfonso Gonzalez <alfonso.gonzalez@mydrivesolutions.com>
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -264,28 +341,7 @@ docker build -t hello-world .
 ```
 
 * The **ADD** instruction will copy new files from <src> and add them to the container's filesystem at path <dest>. It allows a URL in <src>. If the <src> parameter of ADD is an archive in a recognised compression format, it will be unpacked.
-* The **COPY** instruction will copy new files from <src> and add them to the container's filesystem at path <dest>
-
-### PUSH Image to a Registry
-
-```
-REGISTRY=docker.offsidegaming.com:5000
-docker tag hello-world $REGISTRY/offsidegaming/hello-world
-docker push $REGISTRY/offsidegaming/hello-world
-```
-
-* **tag**: Tag an image into a repository
-* **push**: Push an image or a repository to a Docker registry server
-
-### PULL Image from a Repository
-
-```
-docker pull $REGISTRY/offsidegaming/hello-world
-docker run -d -P --name=registry-hello $REGISTRY/offsidegaming/hello-world
-google-chrome $(docker port registry-hello 80)
-```
-
-* **pull**: Pull an image or a repository from a Docker registry server
+* The **COPY** instruction will copy new files from <src> and add them to the container's filesystem at path <dest>. Recommended.
 
 # Docker Patterns
 
@@ -379,6 +435,7 @@ docker-compose
 
 ```
 cd docker-tomcat
+docker-compose build
 docker-compose up
 C^ + C
 docker-compose rm
@@ -391,11 +448,24 @@ docker-compose rm
 
 ```
 
+* **build**: Build all the images 
 * **up**: it will download or build the images and start containers in a proper order. Use -d to run it in daemon.
 * **rm**: Removes all containers
 * **ps**: Shows containers running.
 * **logs**: Shows containers console logs.
 * **stop**: Stop containers
+
+For Rails app workflows:
+
+```
+docker-compose run phone-platform
+docker-compose run phone-platform /bin/bash
+docker-compose run phone-platform bundle exec rake -T
+docker-compose run phone-platform bundle install
+docker-compose run phone-platform env
+docker-compose run phone-platform rake -T
+docker-compose run phone-platform rake bootstrap
+```
 
 # Helpers commands
 
